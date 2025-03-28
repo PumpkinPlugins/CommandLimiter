@@ -1,45 +1,86 @@
-use std::sync::Arc;
+use std::{
+    io::{Read, Write},
+    path::Path,
+    sync::{Arc, LazyLock},
+};
 
-use async_trait::async_trait;
-use pumpkin::plugin::{player::player_join::PlayerJoinEvent, Context, EventHandler, EventPriority};
-use pumpkin_api_macros::{plugin_impl, plugin_method, with_runtime};
-use pumpkin_util::text::{color::NamedColor, TextComponent};
+use pumpkin::plugin::Context;
+use pumpkin_api_macros::{plugin_impl, plugin_method};
+use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 
-struct MyJoinHandler;
-
-#[with_runtime(global)]
-#[async_trait]
-impl EventHandler<PlayerJoinEvent> for MyJoinHandler {
-    async fn handle_blocking(&self, event: &mut PlayerJoinEvent) {
-        event.join_message =
-            TextComponent::text(format!("Welcome, {}!", event.player.gameprofile.name))
-                .color_named(NamedColor::Green);
-    }
-}
+static CONFIG_DIR: LazyLock<Arc<Mutex<String>>> =
+    LazyLock::new(|| Arc::new(Mutex::new("config".to_string())));
+static CONFIG: LazyLock<Arc<Mutex<CommandLimiter>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(CommandLimiter::default())));
 
 #[plugin_method]
 async fn on_load(&mut self, server: &Context) -> Result<(), String> {
     pumpkin::init_log!();
+    *CONFIG_DIR.lock().await = server.get_data_folder();
 
-    log::info!("Hello, Pumpkin!");
-
-    server
-        .register_event(Arc::new(MyJoinHandler), EventPriority::Lowest, true)
+    log::debug!("Registering commands...");
+    /*
+    context
+        .register_command(commands::pv::init_command_tree(), PermissionLvl::Zero)
         .await;
+    */
+    log::debug!("Commands registered!");
+
+    let data_dir = server.get_data_folder();
+    let config_file = Path::new(&data_dir).join("config.json");
+
+    if !config_file.exists() {
+        let mut file = std::fs::File::create(&config_file).map_err(|e| e.to_string())?;
+        let config = serde_json::to_string(&self).map_err(|e| e.to_string())?;
+        file.write(config.as_bytes()).map_err(|e| e.to_string())?;
+    } else {
+        let mut file = std::fs::File::open(&config_file).map_err(|e| e.to_string())?;
+        let mut config = String::new();
+        file.read_to_string(&mut config)
+            .map_err(|e| e.to_string())?;
+        *self = serde_json::from_str(&config).map_err(|e| e.to_string())?;
+    }
+
+    log::info!("CommandLimiter config loaded!");
+
+    *CONFIG.lock().await = self.clone();
+
+    Ok(())
+}
+
+pub async fn save_config() -> Result<(), String> {
+    let config = CONFIG.lock().await.clone();
+    let data_dir = CONFIG_DIR.lock().await.clone();
+    let config_file = Path::new(&data_dir).join("config.json");
+
+    let mut file = std::fs::File::create(&config_file).map_err(|e| e.to_string())?;
+    let config = serde_json::to_string(&config).map_err(|e| e.to_string())?;
+    file.write(config.as_bytes()).map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[plugin_impl]
-pub struct MyPlugin {}
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CommandLimiter {
+    pub commands: Vec<CommandInfo>,
+}
 
-impl MyPlugin {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CommandInfo {
+    pub name: String,
+    pub blacklist: bool,
+    pub allowed: Vec<String>,
+}
+
+impl CommandLimiter {
     pub fn new() -> Self {
-        MyPlugin {}
+        Self { commands: vec![] }
     }
 }
 
-impl Default for MyPlugin {
+impl Default for CommandLimiter {
     fn default() -> Self {
         Self::new()
     }
