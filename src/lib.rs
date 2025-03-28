@@ -4,7 +4,10 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use pumpkin::plugin::Context;
+use pumpkin::plugin::{
+    player::player_command_send::PlayerCommandSendEvent, Cancellable, Context, EventHandler,
+    EventPriority,
+};
 use pumpkin_api_macros::{plugin_impl, plugin_method};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -14,18 +17,39 @@ static CONFIG_DIR: LazyLock<Arc<Mutex<String>>> =
 static CONFIG: LazyLock<Arc<Mutex<CommandLimiter>>> =
     LazyLock::new(|| Arc::new(Mutex::new(CommandLimiter::default())));
 
+struct CommandSendHandler;
+
+#[async_trait::async_trait]
+impl EventHandler<PlayerCommandSendEvent> for CommandSendHandler {
+    async fn handle_blocking(&self, event: &mut PlayerCommandSendEvent) {
+        let config = CONFIG.lock().await.clone();
+        let command = event.command.clone();
+        let player = event.player.gameprofile.name.clone();
+
+        for cmd in config.commands.iter() {
+            if cmd.name == command {
+                if cmd.blacklist {
+                    if cmd.allowed.contains(&player) {
+                        return;
+                    }
+                    event.set_cancelled(true);
+                    return;
+                } else {
+                    if cmd.allowed.contains(&player) {
+                        return;
+                    }
+                    event.set_cancelled(true);
+                    return;
+                }
+            }
+        }
+    }
+}
+
 #[plugin_method]
 async fn on_load(&mut self, server: &Context) -> Result<(), String> {
     pumpkin::init_log!();
     *CONFIG_DIR.lock().await = server.get_data_folder();
-
-    log::debug!("Registering commands...");
-    /*
-    context
-        .register_command(commands::pv::init_command_tree(), PermissionLvl::Zero)
-        .await;
-    */
-    log::debug!("Commands registered!");
 
     let data_dir = server.get_data_folder();
     let config_file = Path::new(&data_dir).join("config.json");
@@ -43,6 +67,10 @@ async fn on_load(&mut self, server: &Context) -> Result<(), String> {
     }
 
     log::info!("CommandLimiter config loaded!");
+
+    server.register_event(Arc::new(CommandSendHandler), EventPriority::Highest, true);
+
+    log::info!("CommandLimiter event handler registered!");
 
     *CONFIG.lock().await = self.clone();
 
