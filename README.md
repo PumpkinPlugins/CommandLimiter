@@ -1,2 +1,2 @@
-# Hello, Pumpkin!
-This repository is home to the Example Plugin from the [Pumpkin Documentation](https://pumpkinmc.org/plugin-dev/example-plugin/introduction).
+# Command Limiter
+A simple [Pumpkin](https://github.com/Pumpkin-MC/Pumpkin) plugin that allows admins to limit access to certain commands to certain players.
