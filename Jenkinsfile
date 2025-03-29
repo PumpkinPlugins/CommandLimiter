@@ -47,6 +47,8 @@ EOF
 
                             # Build with the proper target
                             cargo build --release --target aarch64-unknown-linux-gnu
+
+                            chown -R 103:103 target/aarch64-unknown-linux-gnu
                         '''
                         stash includes: 'target/aarch64-unknown-linux-gnu/release/*.so', name: 'linux-arm64'
                     }
