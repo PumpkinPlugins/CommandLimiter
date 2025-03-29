@@ -67,6 +67,7 @@ EOF
                             rustup target add x86_64-pc-windows-gnu
                             apt-get update && apt-get install -y mingw-w64
                             cargo build --release --target x86_64-pc-windows-gnu
+                            chown -R 103:103 target/x86_64-pc-windows-gnu
                         '''
                         stash includes: 'target/x86_64-pc-windows-gnu/release/*.dll', name: 'windows-x86_64'
                     }
