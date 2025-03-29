@@ -25,14 +25,14 @@ pipeline {
                     agent {
                         docker {
                             image 'rust:latest'
-                            args '-v ${WORKSPACE}:/workspace'
+                            args '-v ${WORKSPACE}:/workspace -u root'
                         }
                     }
                     steps {
                         sh '''
                             cd /workspace
                             rustup target add aarch64-unknown-linux-gnu
-                            sudo apt-get update && apt-get install -y gcc-aarch64-linux-gnu
+                            apt-get update && apt-get install -y gcc-aarch64-linux-gnu
                             cargo build --release --target aarch64-unknown-linux-gnu
                         '''
                         stash includes: 'target/aarch64-unknown-linux-gnu/release/*.so', name: 'linux-arm64'
@@ -43,14 +43,14 @@ pipeline {
                     agent {
                         docker {
                             image 'rust:latest'
-                            args '-v ${WORKSPACE}:/workspace'
+                            args '-v ${WORKSPACE}:/workspace -u root'
                         }
                     }
                     steps {
                         sh '''
                             cd /workspace
                             rustup target add x86_64-pc-windows-gnu
-                            sudo apt-get update && apt-get install -y mingw-w64
+                            apt-get update && apt-get install -y mingw-w64
                             cargo build --release --target x86_64-pc-windows-gnu
                         '''
                         stash includes: 'target/x86_64-pc-windows-gnu/release/*.dll', name: 'windows-x86_64'
