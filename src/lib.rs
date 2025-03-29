@@ -68,7 +68,9 @@ async fn on_load(&mut self, server: &Context) -> Result<(), String> {
 
     log::info!("CommandLimiter config loaded!");
 
-    server.register_event(Arc::new(CommandSendHandler), EventPriority::Highest, true);
+    server
+        .register_event(Arc::new(CommandSendHandler), EventPriority::Highest, true)
+        .await;
 
     log::info!("CommandLimiter event handler registered!");
 
