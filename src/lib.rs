@@ -6,9 +6,11 @@ use std::{
 
 use pumpkin::plugin::{Context, EventPriority};
 use pumpkin_api_macros::{plugin_impl, plugin_method};
+use pumpkin_util::PermissionLvl;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
+mod commands;
 mod events;
 
 static CONFIG_DIR: LazyLock<Arc<Mutex<String>>> =
@@ -46,7 +48,11 @@ async fn on_load(&mut self, server: &Context) -> Result<(), String> {
         )
         .await;
 
-    log::info!("CommandLimiter event handler registered!");
+    server
+        .register_command(commands::init_command_tree(), PermissionLvl::Four)
+        .await;
+
+    log::info!("CommandLimiter ready!");
 
     *CONFIG.lock().await = self.clone();
 
