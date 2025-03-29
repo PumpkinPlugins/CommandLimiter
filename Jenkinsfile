@@ -31,8 +31,21 @@ pipeline {
                     steps {
                         sh '''
                             cd /workspace
+                            # Install ARM64 cross-compilation tools
+                            apt-get update
+                            apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+                            # Add ARM64 target
                             rustup target add aarch64-unknown-linux-gnu
-                            apt-get update && apt-get install -y gcc-aarch64-linux-gnu
+
+                            # Create a .cargo/config.toml file to specify the linker
+                            mkdir -p .cargo
+                            cat > .cargo/config.toml << EOF
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+EOF
+
+                            # Build with the proper target
                             cargo build --release --target aarch64-unknown-linux-gnu
                         '''
                         stash includes: 'target/aarch64-unknown-linux-gnu/release/*.so', name: 'linux-arm64'
