@@ -1,7 +1,28 @@
 pipeline {
     agent none
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     stages {
+        stage('Check Commit Message') {
+            agent any
+            steps {
+                checkout scm
+                script {
+                    def commitMessage = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    def skipBuild = (commitMessage =~ /\[skip ci\]|\[no ci\]/).find()
+
+                    if (skipBuild) {
+                        echo "Skipping build due to commit message containing [skip ci] or [no ci]"
+                        currentBuild.result = 'NOT_BUILT'
+                        error("Skipping build due to commit message")
+                    }
+                }
+            }
+        }
+
         stage('Build for Multiple Platforms') {
             parallel {
                 stage('Linux x86_64') {
