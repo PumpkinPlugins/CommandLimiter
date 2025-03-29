@@ -4,47 +4,17 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use pumpkin::plugin::{
-    player::player_command_send::PlayerCommandSendEvent, Cancellable, Context, EventHandler,
-    EventPriority,
-};
+use pumpkin::plugin::{Context, EventPriority};
 use pumpkin_api_macros::{plugin_impl, plugin_method};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
+mod events;
+
 static CONFIG_DIR: LazyLock<Arc<Mutex<String>>> =
     LazyLock::new(|| Arc::new(Mutex::new("config".to_string())));
-static CONFIG: LazyLock<Arc<Mutex<CommandLimiter>>> =
+pub static CONFIG: LazyLock<Arc<Mutex<CommandLimiter>>> =
     LazyLock::new(|| Arc::new(Mutex::new(CommandLimiter::default())));
-
-struct CommandSendHandler;
-
-#[async_trait::async_trait]
-impl EventHandler<PlayerCommandSendEvent> for CommandSendHandler {
-    async fn handle_blocking(&self, event: &mut PlayerCommandSendEvent) {
-        let config = CONFIG.lock().await.clone();
-        let command = event.command.clone();
-        let player = event.player.gameprofile.name.clone();
-
-        for cmd in config.commands.iter() {
-            if cmd.name == command {
-                if cmd.blacklist {
-                    if cmd.allowed.contains(&player) {
-                        return;
-                    }
-                    event.set_cancelled(true);
-                    return;
-                } else {
-                    if cmd.allowed.contains(&player) {
-                        return;
-                    }
-                    event.set_cancelled(true);
-                    return;
-                }
-            }
-        }
-    }
-}
 
 #[plugin_method]
 async fn on_load(&mut self, server: &Context) -> Result<(), String> {
@@ -69,7 +39,11 @@ async fn on_load(&mut self, server: &Context) -> Result<(), String> {
     log::info!("CommandLimiter config loaded!");
 
     server
-        .register_event(Arc::new(CommandSendHandler), EventPriority::Highest, true)
+        .register_event(
+            Arc::new(events::CommandSendHandler),
+            EventPriority::Highest,
+            true,
+        )
         .await;
 
     log::info!("CommandLimiter event handler registered!");
