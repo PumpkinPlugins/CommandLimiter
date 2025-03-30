@@ -1,8 +1,8 @@
 use pumpkin::plugin::{
-    player::{player_command_send::PlayerCommandSendEvent, PlayerEvent},
     Cancellable, EventHandler,
+    player::{PlayerEvent, player_command_send::PlayerCommandSendEvent},
 };
-use pumpkin_util::text::{color::NamedColor, TextComponent};
+use pumpkin_util::text::{TextComponent, color::NamedColor};
 
 use crate::CONFIG;
 
@@ -17,22 +17,13 @@ impl EventHandler<PlayerCommandSendEvent> for CommandSendHandler {
 
         for cmd in config.commands.iter() {
             if cmd.name == command {
-                if cmd.blacklist {
-                    if cmd.allowed.contains(&player) {
-                        return;
-                    }
-                    event.set_cancelled(true);
-                    event
-                        .get_player()
-                        .send_system_message(
-                            &TextComponent::text(config.block_message).color_named(NamedColor::Red),
-                        )
-                        .await;
-                    return;
+                let should_block = if cmd.blacklist {
+                    cmd.allowed.contains(&player)
                 } else {
-                    if cmd.allowed.contains(&player) {
-                        return;
-                    }
+                    !cmd.allowed.contains(&player)
+                };
+
+                if should_block {
                     event.set_cancelled(true);
                     event
                         .get_player()
@@ -40,8 +31,8 @@ impl EventHandler<PlayerCommandSendEvent> for CommandSendHandler {
                             &TextComponent::text(config.block_message).color_named(NamedColor::Red),
                         )
                         .await;
-                    return;
                 }
+                return;
             }
         }
     }
