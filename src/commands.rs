@@ -27,35 +27,37 @@ impl CommandExecutor for BlacklistAll {
         _server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let Some(Arg::Msg(command)) = args.get(ARG_COMMAND) else {
+        let Some(Arg::Simple(command)) = args.get(ARG_COMMAND) else {
             return Err(CommandError::InvalidConsumption(Some(ARG_COMMAND.into())));
         };
 
-        let mut config = CONFIG.lock().await.clone();
+        {
+            let mut config = CONFIG.lock().await;
 
-        for mut c in config.commands.clone() {
-            if c.name == *command {
-                c.blacklist = false;
-                c.allowed = Vec::new();
+            for mut c in config.commands.clone() {
+                if c.name == *command {
+                    c.blacklist = false;
+                    c.allowed = Vec::new();
 
-                sender
-                    .send_message(
-                        TextComponent::text("Successfully blacklisted command.")
-                            .color_named(NamedColor::Green),
-                    )
-                    .await;
+                    sender
+                        .send_message(
+                            TextComponent::text("Successfully blacklisted command.")
+                                .color_named(NamedColor::Green),
+                        )
+                        .await;
 
-                let _ = save_config().await;
+                    let _ = save_config().await;
 
-                return Ok(());
+                    return Ok(());
+                }
             }
-        }
 
-        config.commands.push(CommandInfo {
-            name: command.clone(),
-            blacklist: false,
-            allowed: Vec::new(),
-        });
+            config.commands.push(CommandInfo {
+                name: command.to_string(),
+                blacklist: false,
+                allowed: Vec::new(),
+            });
+        }
 
         sender
             .send_message(
@@ -80,7 +82,7 @@ impl CommandExecutor for LimitCommand {
         _server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let Some(Arg::Msg(command)) = args.get(ARG_COMMAND) else {
+        let Some(Arg::Simple(command)) = args.get(ARG_COMMAND) else {
             return Err(CommandError::InvalidConsumption(Some(ARG_COMMAND.into())));
         };
 
@@ -88,35 +90,37 @@ impl CommandExecutor for LimitCommand {
             return Err(CommandError::InvalidConsumption(Some(ARG_BLACKLIST.into())));
         };
 
-        let Some(Arg::Msg(allowed)) = args.get(ARG_ALLOWED) else {
+        let Some(Arg::Simple(allowed)) = args.get(ARG_ALLOWED) else {
             return Err(CommandError::InvalidConsumption(Some(ARG_ALLOWED.into())));
         };
 
-        let mut config = CONFIG.lock().await.clone();
+        {
+            let mut config = CONFIG.lock().await;
 
-        for mut c in config.commands.clone() {
-            if c.name == *command {
-                c.blacklist = *blacklist;
-                c.allowed = allowed.split(',').map(|s| s.to_string()).collect();
+            for mut c in config.commands.clone() {
+                if c.name == *command {
+                    c.blacklist = *blacklist;
+                    c.allowed = allowed.split(',').map(|s| s.to_string()).collect();
 
-                sender
-                    .send_message(
-                        TextComponent::text("Successfully limited command.")
-                            .color_named(NamedColor::Green),
-                    )
-                    .await;
+                    sender
+                        .send_message(
+                            TextComponent::text("Successfully limited command.")
+                                .color_named(NamedColor::Green),
+                        )
+                        .await;
 
-                let _ = save_config().await;
+                    let _ = save_config().await;
 
-                return Ok(());
+                    return Ok(());
+                }
             }
-        }
 
-        config.commands.push(CommandInfo {
-            name: command.clone(),
-            blacklist: *blacklist,
-            allowed: allowed.split(',').map(|s| s.to_string()).collect(),
-        });
+            config.commands.push(CommandInfo {
+                name: command.to_string(),
+                blacklist: *blacklist,
+                allowed: allowed.split(',').map(|s| s.to_string()).collect(),
+            });
+        }
 
         sender
             .send_message(
