@@ -75,6 +75,7 @@ pub async fn save_config() -> Result<(), String> {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CommandLimiter {
     pub commands: Vec<CommandInfo>,
+    pub block_message: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -86,7 +87,10 @@ pub struct CommandInfo {
 
 impl CommandLimiter {
     pub fn new() -> Self {
-        Self { commands: vec![] }
+        Self {
+            commands: vec![],
+            block_message: "You are not allowed to use this command.".to_string(),
+        }
     }
 }
 
