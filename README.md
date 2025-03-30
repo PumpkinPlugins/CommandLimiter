@@ -28,7 +28,8 @@ The plugin configuration is stored in the `config.json` file in the `plugins/com
         "player2"
       ]
     }
-  ]
+  ],
+  "block_message": "You are not allowed to use this command."
 }
 ```
 
