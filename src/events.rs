@@ -5,12 +5,14 @@ use pumpkin::plugin::{
 use pumpkin_util::text::{TextComponent, color::NamedColor};
 
 use crate::CONFIG;
+use pumpkin::server::Server;
+use std::sync::Arc;
 
 pub struct CommandSendHandler;
 
 #[async_trait::async_trait]
 impl EventHandler<PlayerCommandSendEvent> for CommandSendHandler {
-    async fn handle_blocking(&self, event: &mut PlayerCommandSendEvent) {
+    async fn handle_blocking(&self, _server: &Arc<Server>, event: &mut PlayerCommandSendEvent) {
         let config = CONFIG.lock().await.clone();
         let command = event.command.clone();
         let player = event.get_player().gameprofile.name.clone();

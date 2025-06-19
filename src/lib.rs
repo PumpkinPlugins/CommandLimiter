@@ -6,7 +6,10 @@ use std::{
 
 use pumpkin::plugin::{Context, EventPriority};
 use pumpkin_api_macros::{plugin_impl, plugin_method};
-use pumpkin_util::PermissionLvl;
+use pumpkin_util::{
+    PermissionLvl,
+    permission::{Permission, PermissionDefault},
+};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
@@ -48,8 +51,19 @@ async fn on_load(&mut self, server: &Context) -> Result<(), String> {
         )
         .await;
 
+    let perm = Permission::new(
+        "commandlimiter:command.limitcommand",
+        "Allows the player to run the /limitcommand command",
+        PermissionDefault::Op(PermissionLvl::Four),
+    );
+
+    server.register_permission(perm).await?;
+
     server
-        .register_command(commands::init_command_tree(), PermissionLvl::Four)
+        .register_command(
+            commands::init_command_tree(),
+            "commandlimiter:command.limitcommand",
+        )
         .await;
 
     log::info!("CommandLimiter ready!");
